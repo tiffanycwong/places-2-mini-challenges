@@ -15,24 +15,22 @@ flags.DEFINE_float("learning_rate", 0.001, "Learning rate of for adam")
 flags.DEFINE_float("keep_prob", 0.75, "Dropout probability to keep")
 flags.DEFINE_integer("batch_size", 128, "The size of mini batches to use")
 flags.DEFINE_string("checkpoint_dir", "checkpoints/{}".format(MODEL.model_name()), "Directory name to save the checkpoints")
-flags.DEFINE_boolean("small_data", True, "True for small data (makes debugging easier).")
-flags.DEFINE_boolean("easy_data", False, "True for easy data (just 4 classes) (makes debugging easier).")
+flags.DEFINE_boolean("load_small", False, "True for small data (makes debugging easier).")
+flags.DEFINE_boolean("load_easy", False, "True for easy data (just 4 classes) (makes debugging easier).")
 flags.DEFINE_boolean("is_train", True, "True for training, False for testing")
 flags.DEFINE_boolean("augment_training_data", False, "True to augment training data, False to leave alone")
-flags.DEFINE_boolean("verbose", False, "True to print verbose-style")
+flags.DEFINE_boolean("verbose", True, "True to print verbose-style")
 flags.DEFINE_boolean("restart_training", True, "True to restart training from scratch everytime, False to load from last checkpoint.")
-flags.DEFINE_integer("resize_image_to", 256, "Set dimension to resize image to.")
+flags.DEFINE_integer("resize_dim", 128, "Set dimension to resize image to.")
 
 FLAGS = flags.FLAGS
 
 def main(_):
-    X_train, Y_train = utils.get_data('train', FLAGS.small_data, FLAGS.easy_data, (FLAGS.resize_image_to, FLAGS.resize_image_to))
-    X_val, Y_val = utils.get_data('val', FLAGS.small_data, FLAGS.easy_data, (FLAGS.resize_image_to, FLAGS.resize_image_to))
-
     with tf.Session() as session:
+        print('Starting Session...')
         model = MODEL(FLAGS, session)
         if FLAGS.is_train:
-            model.train(FLAGS, X_train, Y_train, X_val, Y_val)
+            model.train()
         else:
             model.load(FLAGS.checkpoint_dir)
             model.evaluate_on_test(session)
