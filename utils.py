@@ -5,10 +5,11 @@ from sklearn.utils import shuffle
 import scipy.ndimage
 import matplotlib.pyplot as plt
 from memoize import *
-import process_xml
+from process_XML import extract_XML_obj
 def get_data_for_batch(split_name, batch_index, batch_size, train_indices, load_small=False, load_easy=False, resize_dim=None):
     image_path_label_pairs = get_image_path_label_pairs(split_name, load_easy, load_small)
-    objects = get_objects(split_name.replace("images","objects"))
+    objects = get_objects(split_name.replace("images","objects"), load_easy,
+            load_small)
     num_examples = len(image_path_label_pairs)
     start_index = batch_index*batch_size
     end_index = min(num_examples, (batch_index+1)*batch_size)
@@ -37,7 +38,7 @@ def get_objects(split_name, load_easy, load_small):
     object_paths = [("./data/objects/"+row.split(' ')[0].strip(),row.split(' ')[1].strip()) for row in open(scene_mapping_path).readlines()]
     if load_small:
         object_paths = object_paths[:500]
-    objects = map(extract_XML_obj, object_paths)
+    objects = map(lambda  x:extract_XML_obj(x[0]), object_paths)
     return objects
 
 def image_process(image, resize_dim):
