@@ -35,10 +35,10 @@ def get_data_for_batch(split_name, batch_index, batch_size, train_indices, load_
 def get_objects(split_name, load_easy, load_small):
     easy_str = "_easy" if load_easy else ""
     scene_mapping_path = './development_kit/data/{}{}.txt'.format(split_name, easy_str)
-    object_paths = [("./data/objects/"+row.split(' ')[0].strip(),row.split(' ')[1].strip()) for row in open(scene_mapping_path).readlines()]
+    object_paths = ["./data/objects/"+row.split(' ')[0].strip().replace(".jpg",".xml") for row in open(scene_mapping_path).readlines()]
     if load_small:
         object_paths = object_paths[:500]
-    objects = map(lambda  x:extract_XML_obj(x[0]), object_paths)
+    objects = map(extract_XML_obj, object_paths)
     return objects
 
 def image_process(image, resize_dim):
