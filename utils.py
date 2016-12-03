@@ -33,7 +33,7 @@ def get_data_for_batch(split_name, batch_index, batch_size, train_indices, load_
             object_class, min_x, max_x, min_y, max_y = obj
             object_encoding[int(object_class)] += 1.0
 
-        object_encodings.append(object_encoding)sla
+        object_encodings.append(object_encoding)
 
 
     Y_batch['scene_category'] = np.array(scene_category)
