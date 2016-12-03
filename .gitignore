@@ -2,6 +2,7 @@ data/*
 checkpoints/*
 pretrained_slim/*
 *.DS_Store
+GoogleNews-vectors-negative300.bin
 
 
 # ------------------------------------------------
