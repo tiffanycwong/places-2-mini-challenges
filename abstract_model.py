@@ -30,7 +30,10 @@ class AbstractModel():
 
     @staticmethod
     def model_name():
-        raise NotImplementedError("Please Implement function")        
+        raise NotImplementedError("Please Implement function")
+
+    def get_loss_weights():
+        return [1.0]
 
     def build_model_and_architecture(self):
         print("Building model...")
@@ -40,7 +43,9 @@ class AbstractModel():
         self.label_placeholders_dict = {}
         self.label_placeholders_dict["scene_category"] = tf.placeholder(tf.float32, [None, 100], name='scene_category')
         n_objects = 1000 # replace with different number if not true
+        word_embedding_size = 300
         self.label_placeholders_dict["object_encodings"] = tf.placeholder(tf.float32, [None, n_objects], name='object_encodings')
+        self.label_placeholders_dict["word_embeddings_averages"] = tf.placeholder(tf.float32, [None, word_embedding_size], name='object_encodings')
 
         self.keep_prob = tf.placeholder(tf.float32)
 
@@ -57,8 +62,15 @@ class AbstractModel():
         self.saver = tf.train.Saver()
 
     def get_total_loss(self, losses):
-        total_loss = sum(losses)
-        # total_loss = slim.losses.get_total_loss(total_loss, add_regularization_losses=True)
+        weights = self.get_loss_weights()
+        for i in range(len(losses)):
+            loss = losses[i]
+            weight = weights[i]
+            if i == 0:
+                total_loss = loss * weight
+            else:
+                total_loss += loss * weight
+        
         return total_loss
 
     def train(self):

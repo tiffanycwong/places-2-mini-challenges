@@ -6,6 +6,19 @@ import scipy.ndimage
 import matplotlib.pyplot as plt
 from memoize import *
 from process_XML import extract_XML_obj
+import json
+
+@memoize
+def load_word_embeddings():
+    with open('./word_dict.txt') as file:
+        word_dict = json.load(file)
+    return word_dict
+
+@memoize
+def load_index_to_object_mapping():
+    with open('object_index_to_string_mapping.txt') as file:
+        mapping = json.load(file)
+    return mapping
 
 def get_data_for_batch(split_name, batch_index, batch_size, train_indices, load_small=False, load_easy=False, resize_dim=None):
     image_path_label_pairs = get_image_path_label_pairs(split_name, load_easy, load_small)
@@ -16,7 +29,10 @@ def get_data_for_batch(split_name, batch_index, batch_size, train_indices, load_
     X_batch = []
     scene_category = []
     object_encodings = []
+    word_embeddings_averages = []
     Y_batch = {}
+    word_embedding_dictionary = load_word_embeddings()
+    index_to_object_mapping = load_index_to_object_mapping()
 
     for i in xrange(start_index, end_index):
         idx = train_indices[i]
@@ -29,15 +45,24 @@ def get_data_for_batch(split_name, batch_index, batch_size, train_indices, load_
         scene_category.append(label_one_hot)
         objects_for_this = objects[idx]
         object_encoding = np.zeros(1000)
+        word_embedding_average = np.zeros(300)
         for obj in objects_for_this:
             object_class, min_x, max_x, min_y, max_y = obj
             object_encoding[int(object_class)] += 1.0
+            object_class_string = index_to_object_mapping[str(object_class)]
+            word_embedding = np.array(word_embedding_dictionary[object_class_string])
+            word_embedding_average += word_embedding
+
+        word_embedding_average /= len(objects_for_this)
 
         object_encodings.append(object_encoding)
+        word_embeddings_averages.append(word_embedding_average)
 
 
     Y_batch['scene_category'] = np.array(scene_category)
     Y_batch['object_encodings'] = np.array(object_encodings)
+    Y_batch['word_embeddings_averages'] = np.array(word_embeddings_averages)
+
     X_batch = np.array(X_batch)
 
     return X_batch, Y_batch
