@@ -5,6 +5,7 @@ pretrained_slim/*
 GoogleNews-vectors-negative300.bin
 
 
+.idea/
 # ------------------------------------------------
 # ---------- Standard Python .gitignore ----------
 # ------------------------------------------------

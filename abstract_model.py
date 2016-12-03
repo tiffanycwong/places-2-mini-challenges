@@ -39,8 +39,8 @@ class AbstractModel():
 
         self.label_placeholders_dict = {}
         self.label_placeholders_dict["scene_category"] = tf.placeholder(tf.float32, [None, 100], name='scene_category')
-        n_objects = 100 # replace with different number if not true
-        self.label_placeholders_dict["objects"] = tf.placeholder(tf.float32, [None, n_objects], name='obj')
+        n_objects = 1000 # replace with different number if not true
+        self.label_placeholders_dict["object_encodings"] = tf.placeholder(tf.float32, [None, n_objects], name='object_encodings')
 
         self.keep_prob = tf.placeholder(tf.float32)
 
