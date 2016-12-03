@@ -13,9 +13,9 @@ class Model(AbstractModel):
             print(self.input_placeholder.get_shape().as_list())
             logits, end_points = inception_v3.inception_v3(self.input_placeholder, num_classes=1001)
 
-            # Load Pretrained Inception Weights
-            loader = tf.train.Saver()
-            loader.restore(self.session, "./pretrained_slim/inception_v3.ckpt")
+            # # Load Pretrained Inception Weights
+            # loader = tf.train.Saver()
+            # loader.restore(self.session, "./pretrained_slim/inception_v3.ckpt")
 
             # Get image features output from Inception and make new classifier layers
             image_features = slim.flatten(end_points['PreLogits'])

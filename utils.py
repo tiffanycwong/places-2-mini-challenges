@@ -6,15 +6,16 @@ import scipy.ndimage
 import matplotlib.pyplot as plt
 from memoize import *
 from process_XML import extract_XML_obj
+
 def get_data_for_batch(split_name, batch_index, batch_size, train_indices, load_small=False, load_easy=False, resize_dim=None):
     image_path_label_pairs = get_image_path_label_pairs(split_name, load_easy, load_small)
-    objects = get_objects(split_name.replace("images","objects"), load_easy,
-            load_small)
+    objects = get_objects(split_name, load_easy, load_small)
     num_examples = len(image_path_label_pairs)
     start_index = batch_index*batch_size
     end_index = min(num_examples, (batch_index+1)*batch_size)
     X_batch = []
     scene_category = []
+    object_encodings = []
     Y_batch = {}
 
     for i in xrange(start_index, end_index):
@@ -26,12 +27,22 @@ def get_data_for_batch(split_name, batch_index, batch_size, train_indices, load_
         X_batch.append(image)
         label_one_hot = one_hot_encoding(int(label), 100)
         scene_category.append(label_one_hot)
+        objects_for_this = objects[idx]
+        object_encoding = np.zeros(1000)
+        for obj in objects_for_this:
+            object_class, min_x, max_x, min_y, max_y = obj
+            object_encoding[int(object_class)] += 1.0
+
+        object_encodings.append(object_encoding)sla
+
 
     Y_batch['scene_category'] = np.array(scene_category)
+    Y_batch['object_encodings'] = np.array(object_encodings)
     X_batch = np.array(X_batch)
 
     return X_batch, Y_batch
 
+@memoize
 def get_objects(split_name, load_easy, load_small):
     easy_str = "_easy" if load_easy else ""
     scene_mapping_path = './development_kit/data/{}{}.txt'.format(split_name, easy_str)

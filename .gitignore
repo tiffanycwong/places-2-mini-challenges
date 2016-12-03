@@ -2,7 +2,7 @@ data/*
 checkpoints/*
 pretrained_slim/*
 *.DS_Store
-
+.idea/
 
 # ------------------------------------------------
 # ---------- Standard Python .gitignore ----------

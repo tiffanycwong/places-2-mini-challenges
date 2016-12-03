@@ -19,7 +19,7 @@ flags.DEFINE_boolean("load_small", False, "True for small data (makes debugging 
 flags.DEFINE_boolean("load_easy", False, "True for easy data (just 4 classes) (makes debugging easier).")
 flags.DEFINE_boolean("is_train", True, "True for training, False for testing")
 flags.DEFINE_boolean("augment_training_data", False, "True to augment training data, False to leave alone")
-flags.DEFINE_boolean("verbose", True, "True to print verbose-style")
+flags.DEFINE_boolean("verbose", False, "True to print verbose-style")
 flags.DEFINE_boolean("restart_training", True, "True to restart training from scratch everytime, False to load from last checkpoint.")
 flags.DEFINE_integer("resize_dim", 128, "Set dimension to resize image to.")
 
