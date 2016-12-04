@@ -89,6 +89,16 @@ def one_hot_encoding(label, num_categories):
     one_hot[label] = 1.0
     return one_hot
 
+
+def get_test_image_paths():
+    image_paths = []
+    path_to_images = './data/images/test/'
+    for i in range(1, 10001):
+        i_index = str(i).zfill(8)
+        image_path = '{}{}.jpg'.format(path_to_images, i_index)
+        image_paths.append(image_path)
+    return image_paths
+
 @memoize
 def get_image_path_label_pairs(split_name, load_easy, load_small):
     print('reading {} data'.format(split_name))

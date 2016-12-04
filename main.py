@@ -7,7 +7,7 @@ import utils
 
 # EDIT THIS to change which Model gets loaded
 from shallow_model import Model as MODEL
-from shallow_model_with_word_embeddings import Model as MODEL
+# from shallow_model_with_word_embeddings import Model as MODEL
 # from inception_model import Model as MODEL
 
 flags = tf.app.flags
@@ -33,8 +33,8 @@ def main(_):
         if FLAGS.is_train:
             model.train()
         else:
-            model.load(FLAGS.checkpoint_dir)
-            model.evaluate_on_test(session)
+            # model.load(FLAGS.checkpoint_dir)
+            model.evaluate_on_test()
 
 if __name__ == '__main__':
     tf.app.run()
