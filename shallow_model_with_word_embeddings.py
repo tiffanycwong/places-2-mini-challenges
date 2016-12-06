@@ -14,6 +14,7 @@ class Model(AbstractModel):
 
         scene_logits = slim.fully_connected(image_features, 100, activation_fn=None, scope='scene_pred', trainable=True)
         word_embedding_logits = slim.fully_connected(image_features, 300, activation_fn=None, scope='word_embedding_pred', trainable=True)
+
         obj_embedding_size = 40
         object_embedding_logits = slim.fully_connected(image_features, obj_embedding_size, activation_fn=None, scope='object_embedding_pred', trainable=True)
 
@@ -38,6 +39,7 @@ class Model(AbstractModel):
         object_embedding_loss = tf.reduce_mean(tf.sqrt(tf.square(object_embedding_logits-object_embedding_labels_placeholder)))
 
         losses = [scene_loss, word_embedding_loss, min(sum(object_embedding_labels_placeholder),1)*object_embedding_loss]
+
         return losses
 
     def get_eval_metrics(self):

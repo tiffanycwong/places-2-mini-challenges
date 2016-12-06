@@ -5,6 +5,7 @@ import tensorflow.contrib.slim as slim
 import time
 import utils
 import os
+from skimage import io
 
 class AbstractModel():
 
@@ -30,7 +31,10 @@ class AbstractModel():
 
     @staticmethod
     def model_name():
-        raise NotImplementedError("Please Implement function")        
+        raise NotImplementedError("Please Implement function")
+
+    def get_loss_weights(self):
+        return [1.0]
 
     def build_model_and_architecture(self):
         print("Building model...")
@@ -40,9 +44,11 @@ class AbstractModel():
         self.label_placeholders_dict = {}
         self.label_placeholders_dict["scene_category"] = tf.placeholder(tf.float32, [None, 100], name='scene_category')
         n_objects = 1000 # replace with different number if not true
+        word_embedding_size = 300
         self.label_placeholders_dict["object_encodings"] = tf.placeholder(tf.float32, [None, n_objects], name='object_encodings')
         embedding_size = 40
         self.label_placeholders_dict["compressed_object_encodings"] = tf.placeholder(tf.float32, [None, embedding_size], name='compressed_object_encodings')
+        self.label_placeholders_dict["word_embeddings_averages"] = tf.placeholder(tf.float32, [None, word_embedding_size], name='word_embeddings_averages')
 
         self.keep_prob = tf.placeholder(tf.float32)
 
@@ -55,12 +61,21 @@ class AbstractModel():
 
         self.num_train_examples = len(utils.get_image_path_label_pairs('train', self.FLAGS.load_easy, self.FLAGS.load_small))
         self.num_val_examples = len(utils.get_image_path_label_pairs('val', self.FLAGS.load_easy, self.FLAGS.load_small))
+
+        self.num_test_examples = len(utils.get_test_image_paths())
         self.train_indices = range(self.num_train_examples)
         self.saver = tf.train.Saver()
 
     def get_total_loss(self, losses):
-        total_loss = sum(losses)
-        # total_loss = slim.losses.get_total_loss(total_loss, add_regularization_losses=True)
+        weights = self.get_loss_weights()
+        for i in range(len(losses)):
+            loss = losses[i]
+            weight = weights[i]
+            if i == 0:
+                total_loss = loss * weight
+            else:
+                total_loss += loss * weight
+        
         return total_loss
 
     def train(self):
@@ -135,11 +150,6 @@ class AbstractModel():
 
         n_batches = int(math.ceil(1.0*num_examples / self.FLAGS.batch_size))
 
-        eval_metric_names = self.get_eval_metric_names()
-        metrics_tally = [[] for key in eval_metric_names]
-        total_examples = 0.0
-
-
         for batch_i in xrange(0, n_batches):
             # batch_input, batch_labels = utils.get_batch(X, Y, batch_size=self.FLAGS.batch_size, batch_index=batch_i, augment_training_data=self.FLAGS.augment_training_data)
             batch_input, batch_labels = utils.get_data_for_batch(split_name, batch_i, self.FLAGS.batch_size, range(num_examples), self.FLAGS.load_small, self.FLAGS.load_easy, self.FLAGS.resize_dim)
@@ -168,10 +178,40 @@ class AbstractModel():
         print("")
 
 
-    def evaluate_model(self, X_train, Y_train, X_val, Y_val):
+    def evaluate_on_test(self):
         tf.initialize_all_variables().run()
-        counter = 1
-        epoch = 0
-        start_time = time.time()
-        self.get_metrics_post_epoch('val', self.FLAGS.batch_size, counter, epoch, start_time)
+        self.predict_and_output_to_file()
+
+
+    def predict_and_output_to_file(self):
+        image_file_names = utils.get_test_image_paths()
+        image_file_names = image_file_names[:200]
+        predictions = []
+
+        with open ('./output_{}.txt'.format(self.model_name()), 'w') as file:
+
+            for example_index in range(len(image_file_names)):
+                if example_index % 100 == 0:
+                    print("{} of {}".format(example_index, len(image_file_names)))
+                file_name = image_file_names[example_index]
+                image = io.imread(file_name)
+                image = utils.image_process(image, 128)
+
+                feed_dict = {self.input_placeholder: np.array([image]), self.keep_prob:1.0}
+
+                # Update Network Parameters and get Summary
+                prediction = self.session.run(self.outputs[0], feed_dict=feed_dict)
+                prediction = prediction[0]
+                prediction_list = [(prediction[index], index) for index in range(len(prediction))]
+                sorted_prediction_list = sorted(prediction_list)[::-1]
+                best_5_indicies = sorted_prediction_list[0:5]
+                best_5_indicies = [best[1] for best in best_5_indicies]
+                predictions.append(best_5_indicies)
+                best_5_string = [str(index) for index in best_5_indicies]
+                best_5_string = " ".join(best_5_string)
+                file_name_plain = file_name.split('/')[-1]
+
+                file.write(file_name_plain + " " + best_5_string + "\n")
+
+        file.close()
 
