@@ -7,6 +7,14 @@ import matplotlib.pyplot as plt
 from memoize import *
 from process_XML import extract_XML_obj
 
+def get_compressed(multi_to_embedding, multi_hot_encoding_strs):
+    return map(lambda x: multi_to_embedding[x], multi_hot_encoding_strs)
+@memoize
+def load_object_embeddings():
+    with open('./compressed_object_dictionary.txt') as file:
+        word_dict = json.load(file)
+    return word_dict
+
 def get_data_for_batch(split_name, batch_index, batch_size, train_indices, load_small=False, load_easy=False, resize_dim=None):
     image_path_label_pairs = get_image_path_label_pairs(split_name, load_easy, load_small)
     objects = get_objects(split_name, load_easy, load_small)
@@ -16,7 +24,9 @@ def get_data_for_batch(split_name, batch_index, batch_size, train_indices, load_
     X_batch = []
     scene_category = []
     object_encodings = []
+    compressed_object_encodings = []
     Y_batch = {}
+    multihot_to_object_embedding = load_object_embeddings()
 
     for i in xrange(start_index, end_index):
         idx = train_indices[i]
@@ -28,7 +38,7 @@ def get_data_for_batch(split_name, batch_index, batch_size, train_indices, load_
         label_one_hot = one_hot_encoding(int(label), 100)
         scene_category.append(label_one_hot)
         objects_for_this = objects[idx]
-        object_encoding = np.zeros(1000)
+        object_encoding = np.zeros(175)
         for obj in objects_for_this:
             object_class, min_x, max_x, min_y, max_y = obj
             object_encoding[int(object_class)] += 1.0
@@ -38,6 +48,9 @@ def get_data_for_batch(split_name, batch_index, batch_size, train_indices, load_
 
     Y_batch['scene_category'] = np.array(scene_category)
     Y_batch['object_encodings'] = np.array(object_encodings)
+    func_multihot_to_compressed_encoding = lambda x: multihot_to_object_embedding[str(x)]
+    Y_batch['compressed_object_encodings'] = np.array(map(func_multihot_to_compressed_encoding, object_encodings))
+
     X_batch = np.array(X_batch)
 
     return X_batch, Y_batch
@@ -51,6 +64,21 @@ def get_objects(split_name, load_easy, load_small):
         object_paths = object_paths[:500]
     objects = map(extract_XML_obj, object_paths)
     return objects
+
+# returns list of multihot objects
+def get_object_multihots(split_name, load_easy, load_small):
+    objects = get_objects(split_name, load_easy, load_small)
+    object_encodings = []
+
+    for example_idx in range(len(objects)): 
+        objects_for_this = objects[example_idx]
+        object_encoding = np.zeros(175)
+        for obj in objects_for_this:
+            object_class, min_x, max_x, min_y, max_y = obj
+            object_encoding[int(object_class)] += 1.0
+        object_encodings.append(object_encoding)
+
+    return np.array(object_encodings)
 
 def image_process(image, resize_dim):
     processed = image

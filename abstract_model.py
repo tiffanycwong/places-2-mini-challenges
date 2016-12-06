@@ -41,6 +41,8 @@ class AbstractModel():
         self.label_placeholders_dict["scene_category"] = tf.placeholder(tf.float32, [None, 100], name='scene_category')
         n_objects = 1000 # replace with different number if not true
         self.label_placeholders_dict["object_encodings"] = tf.placeholder(tf.float32, [None, n_objects], name='object_encodings')
+        embedding_size = 40
+        self.label_placeholders_dict["compressed_object_encodings"] = tf.placeholder(tf.float32, [None, embedding_size], name='compressed_object_encodings')
 
         self.keep_prob = tf.placeholder(tf.float32)
 
