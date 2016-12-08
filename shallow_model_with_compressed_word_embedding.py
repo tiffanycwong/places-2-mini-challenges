@@ -45,7 +45,6 @@ class Model(AbstractModel):
         word_embedding_logits = self.outputs[1]
         word_embedding_labels_placeholder = self.label_placeholders_dict['word_embeddings_averages']
         word_embedding_loss = tf.reduce_mean(tf.sqrt(tf.square(scene_logits-scene_labels_placeholder)))
-        
         return [scene_loss, scene_accuracy, in_top_5, word_embedding_loss]
 
     def get_eval_metric_names(self):
