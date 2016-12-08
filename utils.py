@@ -47,7 +47,6 @@ def get_data_for_batch(split_name, batch_index, batch_size, train_indices, load_
 
     for i in xrange(start_index, end_index):
         idx = train_indices[i]
-        # idx = batch_indicies[i]
         path, label = image_path_label_pairs[idx]
         image = io.imread(path)
         image = image_process(image, resize_dim)
@@ -65,7 +64,8 @@ def get_data_for_batch(split_name, batch_index, batch_size, train_indices, load_
             word_embedding = np.array(word_embedding_dictionary[object_class_string])
             word_embedding_average += word_embedding
 
-        word_embedding_average /= len(objects_for_this)
+        if len(objects_for_this) > 0:
+            word_embedding_average /= len(objects_for_this)
 
         object_encodings.append(object_encoding)
         word_embeddings_averages.append(word_embedding_average)

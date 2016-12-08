@@ -43,7 +43,7 @@ class AbstractModel():
 
         self.label_placeholders_dict = {}
         self.label_placeholders_dict["scene_category"] = tf.placeholder(tf.float32, [None, 100], name='scene_category')
-        n_objects = 1000 # replace with different number if not true
+        n_objects = 175 # replace with different number if not true
         word_embedding_size = 300
         self.label_placeholders_dict["object_encodings"] = tf.placeholder(tf.float32, [None, n_objects], name='object_encodings')
         embedding_size = 40
@@ -164,6 +164,9 @@ class AbstractModel():
 
             # Update Network Parameters and get Summary
             eval_metrics = self.session.run(self.eval_metrics, feed_dict=feed_dict)
+            eval_metric_names = self.get_eval_metric_names()
+            metrics_tally = [[] for key in eval_metric_names]
+            total_examples = 0.0
 
             for i in range(len(eval_metrics)):
                 metric_value = eval_metrics[i]

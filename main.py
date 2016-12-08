@@ -6,7 +6,7 @@ import os
 import utils
 
 # EDIT THIS to change which Model gets loaded
-from shallow_model_with_compressed_word_embedding import Model as MODEL
+from shallow_model_with_word_embeddings import Model as MODEL
 #from shallow_model import Model as MODEL
 # from shallow_model_with_word_embeddings import Model as MODEL
 # from inception_model import Model as MODEL

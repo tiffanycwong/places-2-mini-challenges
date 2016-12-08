@@ -32,13 +32,13 @@ class Model(AbstractModel):
         word_embedding_loss = tf.reduce_mean(tf.sqrt(tf.square(word_embedding_logits-word_embedding_labels_placeholder)))
 
         object_embedding_logits = self.outputs[2]
-        object_embedding_labels_placeholder = self.label_placeholders_dict['object_embeddings_averages']
+        object_embedding_labels_placeholder = self.label_placeholders_dict['compressed_object_encodings']
 
         #TODO: Make loss zero when no objs
-
         object_embedding_loss = tf.reduce_mean(tf.sqrt(tf.square(object_embedding_logits-object_embedding_labels_placeholder)))
+        # object_embedding_loss = tf.reduce_mean(tf.sqrt(tf.square(object_embedding_logits-object_embedding_labels_placeholder)))
 
-        losses = [scene_loss, word_embedding_loss, min(sum(object_embedding_labels_placeholder),1)*object_embedding_loss]
+        losses = [scene_loss, word_embedding_loss, object_embedding_loss]
 
         return losses
 
@@ -58,23 +58,24 @@ class Model(AbstractModel):
         word_embedding_loss = tf.reduce_mean(tf.sqrt(tf.square(word_embedding_logits-word_embedding_labels_placeholder)))
 
         object_embedding_logits = self.outputs[2]
-        object_embedding_labels_placeholder = self.label_placeholders_dict['object_embeddings_averages']
+        object_embedding_labels_placeholder = self.label_placeholders_dict['compressed_object_encodings']
         object_embedding_loss = tf.reduce_mean(tf.sqrt(tf.square(object_embedding_logits-object_embedding_labels_placeholder)))
         
         return [scene_loss, scene_accuracy, in_top_5, word_embedding_loss, object_embedding_loss]
 
     def get_eval_metric_names(self):
-        return ["Scene Loss", "Scene Accuracy Top 1", "Scene Accuracy Top 5", "Word embedding loss", "Object embedding loss"]
+        return ["Scene Loss", "Scene Accuracy Top 1", "Scene Accuracy Top 5", "Word embedding loss", "Compressed Object Encodings loss"]
 
     def get_output_names(self):
-        return ["Scene Classification", "Word Embedding Prediction", "Object Embedding Prediction"]
+        return ["Scene Classification", "Word Embedding Prediction", "Compressed Object Encodings"]
 
     def get_optimizer(self):
         optimizer = tf.train.GradientDescentOptimizer(self.FLAGS.learning_rate).minimize(self.loss)
         return optimizer
 
     def get_loss_weights(self):
-        return [1.0, 1.0]
+        # return [1.0, 1.0]
+        return [1.0, 1.0, 1.0]
 
     @staticmethod
     def model_name():
