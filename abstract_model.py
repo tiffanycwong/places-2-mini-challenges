@@ -45,7 +45,7 @@ class AbstractModel():
         self.label_placeholders_dict["scene_category"] = tf.placeholder(tf.float32, [None, 100], name='scene_category')
         n_objects = 175 # replace with different number if not true
         word_embedding_size = 300
-        self.label_placeholders_dict["object_encodings"] = tf.placeholder(tf.float32, [None, n_objects], name='object_encodings')
+        self.label_placeholders_dict["object_multihot"] = tf.placeholder(tf.float32, [None, n_objects], name='object_multihot')
         embedding_size = 40
         self.label_placeholders_dict["compressed_object_encodings"] = tf.placeholder(tf.float32, [None, embedding_size], name='compressed_object_encodings')
         self.label_placeholders_dict["word_embeddings_averages"] = tf.placeholder(tf.float32, [None, word_embedding_size], name='word_embeddings_averages')
@@ -79,16 +79,18 @@ class AbstractModel():
         return total_loss
 
     def train(self):
+        print('initializing variables...')
         tf.initialize_all_variables().run()
         counter = 0
         for epoch in xrange(self.FLAGS.epoch):
             self.train_indices = utils.shuffle_order(self.train_indices)
             start_time = time.time()
-            self.get_all_metrics_post_epoch(counter, epoch, start_time)
+            # self.get_all_metrics_post_epoch(counter, epoch, start_time)
 
             n_batches = int(math.ceil(1.0*self.num_train_examples/self.FLAGS.batch_size))
 
             for batch_i in xrange(0, n_batches):
+                # print('new batch', batch_i)
                 batch_input, batch_labels = utils.get_data_for_batch('train', batch_i, self.FLAGS.batch_size, self.train_indices, self.FLAGS.load_small, self.FLAGS.load_easy, self.FLAGS.resize_dim)
 
                 feed_dict = {self.input_placeholder: batch_input, self.keep_prob:self.FLAGS.keep_prob}
@@ -102,14 +104,15 @@ class AbstractModel():
                 # Update Network Parameters and get Summary
                 _, batch_loss = self.session.run([self.optimizer, self.loss],
                     feed_dict=feed_dict)
+
                 if self.FLAGS.verbose:
                     print("Batch: [{:2d}] Finished, Stats: time: {:4.4f}, loss: {:.8f}".format(batch_i, time.time() - start_time, batch_loss))
 
                 counter += 1
 
-                if np.mod(counter, 500) == 2:
+                if np.mod(counter, 5000) == 0:
                     print("Saving Model")
-                    if False:
+                    if True:
                         self.save(self.FLAGS.checkpoint_dir, counter)
 
     def save(self, checkpoint_dir, step):
@@ -198,7 +201,7 @@ class AbstractModel():
                     print("{} of {}".format(example_index, len(image_file_names)))
                 file_name = image_file_names[example_index]
                 image = io.imread(file_name)
-                image = utils.image_process(image, 128)
+                image = utils.image_process(image)
 
                 feed_dict = {self.input_placeholder: np.array([image]), self.keep_prob:1.0}
 

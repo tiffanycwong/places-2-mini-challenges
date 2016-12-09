@@ -49,7 +49,7 @@ def get_data_for_batch(split_name, batch_index, batch_size, train_indices, load_
         idx = train_indices[i]
         path, label = image_path_label_pairs[idx]
         image = io.imread(path)
-        image = image_process(image, resize_dim)
+        image = image_process(image)
         X_batch.append(image)
         label_one_hot = one_hot_encoding(int(label), 100)
         scene_category.append(label_one_hot)
@@ -72,8 +72,8 @@ def get_data_for_batch(split_name, batch_index, batch_size, train_indices, load_
 
 
     Y_batch['scene_category'] = np.array(scene_category)
-    Y_batch['object_encodings'] = np.array(object_encodings)
-    func_multihot_to_compressed_encoding = lambda x: multihot_to_object_embedding[str(x)]
+    Y_batch['object_multihot'] = np.array(object_encodings)
+    func_multihot_to_compressed_encoding = lambda x: multihot_to_object_embedding[str(list(x))][0]
     Y_batch['compressed_object_encodings'] = np.array(map(func_multihot_to_compressed_encoding, object_encodings))
     Y_batch['word_embeddings_averages'] = np.array(word_embeddings_averages)
 
@@ -106,11 +106,9 @@ def get_object_multihots(split_name, load_easy, load_small):
 
     return np.array(object_encodings)
 
-def image_process(image, resize_dim):
+def image_process(image):
     processed = image
-    if resize_dim:
-        processed = scipy.misc.imresize(processed, size=(resize_dim, resize_dim))
-    processed = processed.astype(float)/255.0 - 0.5
+    processed = (processed.astype(float)/255.0 - 0.5)*2.0
     return processed
 
 def one_hot_encoding(label, num_categories):
