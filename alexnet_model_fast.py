@@ -10,9 +10,12 @@ class Model(AbstractModel):
     def build_model(self):
         is_train = self.FLAGS.is_train
         is_training = is_train
-        dropout_keep_prob = 1.0
-        if is_train:
-            dropout_keep_prob = 0.5
+        # dropout_keep_prob = 1.0
+        # if is_train:
+        #     dropout_keep_prob = 0.75
+        dropout_keep_prob = self.keep_prob
+
+        print(self.input_placeholder.get_shape().as_list())
 
         with tf.variable_scope('alexnet_v2', 'alexnet_v2', [self.input_placeholder]) as sc:
             end_points_collection = sc.original_name_scope + '_end_points'
@@ -29,19 +32,13 @@ class Model(AbstractModel):
                 net = slim.conv2d(net, 256, [3, 3], scope='conv5')
                 net = slim.max_pool2d(net, [3, 3], 2, scope='pool5')
 
-                # Use conv2d instead of fully_connected layers.
-                with slim.arg_scope([slim.conv2d],
-                                                        weights_initializer=trunc_normal(0.005),
-                                                        biases_initializer=tf.constant_initializer(0.1)):
-                    net = slim.conv2d(net, 4096, [5, 5], padding='VALID',
-                                                        scope='fc6')
-                    net = slim.dropout(net, dropout_keep_prob, is_training=is_training,
-                                                         scope='dropout6')
-                    net = slim.conv2d(net, 4096, [1, 1], scope='fc7')
-                    net = slim.dropout(net, dropout_keep_prob, is_training=is_training,
-                                                         scope='dropout7')
-                    image_features = tf.squeeze(net, [1, 2], name='fc8/squeezed')
-                    print(image_features.get_shape().as_list())
+                net = slim.flatten(net)
+                net = slim.fully_connected(net, 4096, scope='fc6')
+                net = slim.dropout(net, dropout_keep_prob, is_training=is_training, scope='dropout6')
+                net = slim.fully_connected(net, 4096, scope='fc7')
+                net = slim.dropout(net, dropout_keep_prob, is_training=is_training,
+                                                     scope='dropout7')
+                image_features = net
 
 
             scene_logits = slim.fully_connected(image_features, 100, activation_fn=None, scope='scene_pred', trainable=True)
@@ -72,7 +69,7 @@ class Model(AbstractModel):
         object_embedding_labels_placeholder = self.label_placeholders_dict['compressed_object_encodings']
         object_embedding_loss = tf.reduce_mean(tf.sqrt(tf.square(object_embedding_logits-object_embedding_labels_placeholder)))
 
-        losses = [scene_loss, object_embedding_loss, object_multihot_embedding_loss, word_embedding_loss]
+        losses = [scene_loss, object_multihot_embedding_loss, word_embedding_loss, object_embedding_loss]
 
         return losses
 
@@ -85,7 +82,7 @@ class Model(AbstractModel):
         correct_scene_prediction = tf.equal(tf.argmax(scene_logits, 1), tf.argmax(scene_labels_placeholder,1))
         scene_accuracy = tf.reduce_mean(tf.cast(correct_scene_prediction, "float"))
 
-        # in_top_5 = tf.reduce_mean(tf.cast(tf.nn.in_top_k(scene_logits, tf.argmax(scene_labels_placeholder, 1), 5), "float"))
+        in_top_5 = tf.reduce_mean(tf.cast(tf.nn.in_top_k(scene_logits, tf.argmax(scene_labels_placeholder, 1), 5), "float"))
 
         object_multihot_logits = self.outputs[1]
         object_multihot_labels_placeholder = self.label_placeholders_dict['object_multihot']
@@ -99,7 +96,7 @@ class Model(AbstractModel):
         object_embedding_labels_placeholder = self.label_placeholders_dict['compressed_object_encodings']
         object_embedding_loss = tf.reduce_mean(tf.sqrt(tf.square(object_embedding_logits-object_embedding_labels_placeholder)))
         
-        return [scene_loss, scene_accuracy, scene_accuracy, object_multihot_embedding_loss, word_embedding_loss, object_embedding_loss]
+        return [scene_loss, scene_accuracy, in_top_5, object_multihot_embedding_loss, word_embedding_loss, object_embedding_loss]
 
     def get_eval_metric_names(self):
         return ["Scene Loss", "Scene Accuracy Top 1", "Scene Accuracy Top 5", "Multi hot loss", "Word embedding loss", "Compressed Object Encodings loss"]
@@ -108,7 +105,7 @@ class Model(AbstractModel):
         return ["Scene Classification", "Multihot Prediction", "Word Embedding Prediction", "Compressed Object Encodings"]
 
     def get_optimizer(self):
-        optimizer = tf.train.GradientDescentOptimizer(self.FLAGS.learning_rate).minimize(self.loss)
+        optimizer = tf.train.AdamOptimizer(self.FLAGS.learning_rate).minimize(self.loss)
         return optimizer
 
     def get_loss_weights(self):

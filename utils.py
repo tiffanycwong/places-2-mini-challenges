@@ -28,7 +28,7 @@ def load_object_embeddings():
         word_dict = json.load(file)
     return word_dict
 
-def get_data_for_batch(split_name, batch_index, batch_size, train_indices, load_small=False, load_easy=False, resize_dim=None):
+def get_data_for_batch(split_name, batch_index, batch_size, indices, load_small=False, load_easy=False):
     image_path_label_pairs = get_image_path_label_pairs(split_name, load_easy, load_small)
     objects = get_objects(split_name, load_easy, load_small)
     num_examples = len(image_path_label_pairs)
@@ -46,12 +46,16 @@ def get_data_for_batch(split_name, batch_index, batch_size, train_indices, load_
     index_to_object_mapping = load_index_to_object_mapping()
 
     for i in xrange(start_index, end_index):
-        idx = train_indices[i]
+        if split_name == 'train':
+            idx = indices[i]
+        else:
+            idx = i
         path, label = image_path_label_pairs[idx]
         image = io.imread(path)
         image = image_process(image)
         X_batch.append(image)
         label_one_hot = one_hot_encoding(int(label), 100)
+        # print(path, label)
         scene_category.append(label_one_hot)
         objects_for_this = objects[idx]
 
@@ -157,15 +161,9 @@ def get_start_end_index_for_batch(batch_size, batch_index, n_examples):
     end_index_smart = batch_index*batch_size + batch_size_smart
     return start_index, end_index_smart
 
-def shuffle_order(X, Y=None):
+def shuffle_order(indices):
         shuffle_seed = random.randint(0, 1e5)
-        index_shuf = range(len(X))
-        shuffled = shuffle(index_shuf, random_state=shuffle_seed)
-        X_shuffled = np.array([X[i] for i in index_shuf])
-        if Y:
-            Y_shuffled = {key:np.array([Y[key][i] for i in index_shuf]) for key in Y.keys()}
-            return X_shuffled, Y_shuffled
-        else:
-            return X_shuffled
+        shuffled = shuffle(indices, random_state=shuffle_seed)
+        return shuffled
 
 

@@ -16,9 +16,7 @@ class Model(AbstractModel):
                           weights_initializer=tf.truncated_normal_initializer(0.0, 0.01),
                           weights_regularizer=slim.l2_regularizer(0.0005)):
             net = slim.repeat(self.input_placeholder, 2, slim.conv2d, 64, [3, 3], scope='conv1')
-            print(net.get_shape().as_list())
             net = slim.max_pool2d(net, [2, 2], scope='pool1')
-            print(net.get_shape().as_list())
             net = slim.repeat(net, 2, slim.conv2d, 128, [3, 3], scope='conv2')
             net = slim.max_pool2d(net, [2, 2], scope='pool2')
             net = slim.repeat(net, 3, slim.conv2d, 256, [3, 3], scope='conv3')
@@ -27,13 +25,12 @@ class Model(AbstractModel):
             net = slim.max_pool2d(net, [2, 2], scope='pool4')
             net = slim.repeat(net, 3, slim.conv2d, 512, [3, 3], scope='conv5')
             net = slim.max_pool2d(net, [2, 2], scope='pool5')
-            print(net.get_shape().as_list())
             net = slim.flatten(net, scope="flatten")
             net = slim.fully_connected(net, 2048, scope='fc6')
             net = slim.dropout(net, dropout_keep_prob, scope='dropout6')
             net = slim.fully_connected(net, 2048, scope='fc7')
             net = slim.dropout(net, dropout_keep_prob, scope='dropout7')
-            image_features = slim.fully_connected(net, 1000, activation_fn=None, scope='fc8')
+            image_features = net
 
             scene_logits = slim.fully_connected(image_features, 100, activation_fn=None, scope='scene_pred', trainable=True)
             multi_hot_logits = slim.fully_connected(image_features, 175, activation_fn=None, scope='multi_hot_logits', trainable=True)
@@ -76,7 +73,7 @@ class Model(AbstractModel):
         correct_scene_prediction = tf.equal(tf.argmax(scene_logits, 1), tf.argmax(scene_labels_placeholder,1))
         scene_accuracy = tf.reduce_mean(tf.cast(correct_scene_prediction, "float"))
 
-        # in_top_5 = tf.reduce_mean(tf.cast(tf.nn.in_top_k(scene_logits, tf.argmax(scene_labels_placeholder, 1), 5), "float"))
+        in_top_5 = tf.reduce_mean(tf.cast(tf.nn.in_top_k(scene_logits, tf.argmax(scene_labels_placeholder, 1), 5), "float"))
 
         object_multihot_logits = self.outputs[1]
         object_multihot_labels_placeholder = self.label_placeholders_dict['object_multihot']
@@ -90,7 +87,7 @@ class Model(AbstractModel):
         object_embedding_labels_placeholder = self.label_placeholders_dict['compressed_object_encodings']
         object_embedding_loss = tf.reduce_mean(tf.sqrt(tf.square(object_embedding_logits-object_embedding_labels_placeholder)))
         
-        return [scene_loss, scene_accuracy, scene_accuracy, object_multihot_embedding_loss, word_embedding_loss, object_embedding_loss]
+        return [scene_loss, scene_accuracy, in_top_5, object_multihot_embedding_loss, word_embedding_loss, object_embedding_loss]
 
     def get_eval_metric_names(self):
         return ["Scene Loss", "Scene Accuracy Top 1", "Scene Accuracy Top 5", "Multi hot loss", "Word embedding loss", "Compressed Object Encodings loss"]
@@ -100,6 +97,7 @@ class Model(AbstractModel):
 
     def get_optimizer(self):
         optimizer = tf.train.GradientDescentOptimizer(self.FLAGS.learning_rate).minimize(self.loss)
+        # optimizer = tf.train.AdamOptimizer(self.FLAGS.learning_rate).minimize(self.loss)
         return optimizer
 
     def get_loss_weights(self):
@@ -107,4 +105,4 @@ class Model(AbstractModel):
 
     @staticmethod
     def model_name():
-        return "VGGModel"
+        return "VGGModelFast"

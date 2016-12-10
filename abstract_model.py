@@ -6,6 +6,7 @@ import time
 import utils
 import os
 from skimage import io
+from tqdm import tqdm
 
 class AbstractModel():
 
@@ -39,7 +40,7 @@ class AbstractModel():
     def build_model_and_architecture(self):
         print("Building model...")
 
-        self.input_placeholder = tf.placeholder(tf.float32, [None, self.FLAGS.resize_dim, self.FLAGS.resize_dim, 3], name='input_placeholder')
+        self.input_placeholder = tf.placeholder(tf.float32, [None, 128, 128, 3], name='input_placeholder')
 
         self.label_placeholders_dict = {}
         self.label_placeholders_dict["scene_category"] = tf.placeholder(tf.float32, [None, 100], name='scene_category')
@@ -64,17 +65,21 @@ class AbstractModel():
 
         self.num_test_examples = len(utils.get_test_image_paths())
         self.train_indices = range(self.num_train_examples)
+        self.train_indices = utils.shuffle_order(self.train_indices)
         self.saver = tf.train.Saver()
 
     def get_total_loss(self, losses):
         weights = self.get_loss_weights()
+        total_loss = None
         for i in range(len(losses)):
             loss = losses[i]
             weight = weights[i]
-            if i == 0:
-                total_loss = loss * weight
+            if total_loss is None:
+                if weight != 0.0:
+                    total_loss = loss * weight
             else:
-                total_loss += loss * weight
+                if weight != 0.0:
+                    total_loss += loss * weight
         
         return total_loss
 
@@ -85,13 +90,11 @@ class AbstractModel():
         for epoch in xrange(self.FLAGS.epoch):
             self.train_indices = utils.shuffle_order(self.train_indices)
             start_time = time.time()
-            # self.get_all_metrics_post_epoch(counter, epoch, start_time)
 
             n_batches = int(math.ceil(1.0*self.num_train_examples/self.FLAGS.batch_size))
 
-            for batch_i in xrange(0, n_batches):
-                # print('new batch', batch_i)
-                batch_input, batch_labels = utils.get_data_for_batch('train', batch_i, self.FLAGS.batch_size, self.train_indices, self.FLAGS.load_small, self.FLAGS.load_easy, self.FLAGS.resize_dim)
+            for batch_i in tqdm(range(0, n_batches)):
+                batch_input, batch_labels = utils.get_data_for_batch('train', batch_i, self.FLAGS.batch_size, self.train_indices, self.FLAGS.load_small, self.FLAGS.load_easy)
 
                 feed_dict = {self.input_placeholder: batch_input, self.keep_prob:self.FLAGS.keep_prob}
 
@@ -110,10 +113,9 @@ class AbstractModel():
 
                 counter += 1
 
-                if np.mod(counter, 5000) == 0:
-                    print("Saving Model")
-                    if True:
-                        self.save(self.FLAGS.checkpoint_dir, counter)
+            print("Saving...")
+            self.save(self.FLAGS.checkpoint_dir, counter)
+            self.get_all_metrics_post_epoch(counter, epoch, start_time)
 
     def save(self, checkpoint_dir, step):
         model_name = "{}.model".format(self.model_name())
@@ -152,10 +154,11 @@ class AbstractModel():
             num_examples = self.num_val_examples
 
         n_batches = int(math.ceil(1.0*num_examples / self.FLAGS.batch_size))
+        metrics_tally = {}
 
         for batch_i in xrange(0, n_batches):
             # batch_input, batch_labels = utils.get_batch(X, Y, batch_size=self.FLAGS.batch_size, batch_index=batch_i, augment_training_data=self.FLAGS.augment_training_data)
-            batch_input, batch_labels = utils.get_data_for_batch(split_name, batch_i, self.FLAGS.batch_size, range(num_examples), self.FLAGS.load_small, self.FLAGS.load_easy, self.FLAGS.resize_dim)
+            batch_input, batch_labels = utils.get_data_for_batch(split_name, batch_i, self.FLAGS.batch_size, range(num_examples), self.FLAGS.load_small, self.FLAGS.load_easy)
 
             feed_dict = {self.input_placeholder: batch_input, self.keep_prob:1.0}
 
@@ -168,18 +171,17 @@ class AbstractModel():
             # Update Network Parameters and get Summary
             eval_metrics = self.session.run(self.eval_metrics, feed_dict=feed_dict)
             eval_metric_names = self.get_eval_metric_names()
-            metrics_tally = [[] for key in eval_metric_names]
             total_examples = 0.0
 
             for i in range(len(eval_metrics)):
                 metric_value = eval_metrics[i]
                 metric_name = eval_metric_names[i]
-                metrics_tally[i].append(metric_value*len(batch_input))
+                metrics_tally[metric_name] = metrics_tally.get(metric_name, 0.0) + metric_value
             total_examples += len(batch_input)
 
-        for i in range(len(metrics_tally)):
-            metric_value = np.sum(metrics_tally[i])/total_examples
-            metric_name = eval_metric_names[i]
+        for key, value in metrics_tally.iteritems():
+            metric_value = metrics_tally[key]/n_batches
+            metric_name = key
             print("Epoch [{}] [{}] {} = {:.8f}".format(epoch, split_name, metric_name, metric_value))
         print("")
 
@@ -191,7 +193,7 @@ class AbstractModel():
 
     def predict_and_output_to_file(self):
         image_file_names = utils.get_test_image_paths()
-        image_file_names = image_file_names[:200]
+        image_file_names = image_file_names
         predictions = []
 
         with open ('./output_{}.txt'.format(self.model_name()), 'w') as file:
